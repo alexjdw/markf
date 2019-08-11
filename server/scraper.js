@@ -8,7 +8,7 @@ const models = require('./models.js');
 
 const token = 'b2140c7c5378155e';
 const tc_root = 'https://api.totalcorner.com/v1'
-const matchcolumns = 'cornerLine,cornerLineHalf,goalLine,goalLineHalf'
+const matchcolumns = 'cornerLine,cornerLineHalf,goalLine,goalLineHalf,shotOn,shotOff'
 
 const today_url = tc_root + '/match/schedule?&token=' + token
 
@@ -71,6 +71,7 @@ function add_match_to_team(match_id, team_id) {
                 while (team.matches.length > 10) {
                     team.matches.shift()
                 }
+                console.log(team.matches.length);
             }
             team.save()
         });
