@@ -4,31 +4,74 @@ const bodyParser = require('body-parser');
 const cookie = require('cookie-parser');
 const mongoose = require('mongoose');
 const models = require('./server/models.js');
-const scrape = require('./server/scraper.js').scrape
+const scrape = require('./server/scraper.js').scrape;
+
+mongoose.connect('mongodb://localhost:27017/soccer', {connectTimeoutMS: 1000})
 
 // Server
+var app = express();
 const port = 5555;
 
 // Angular
 const angular_folder = __dirname + '/my-app/dist/my-app';
 
-var last_scrape_time = new Date(0);
+// Keep track of last time we scraped.
+var last_scrape_time = new Date(0).getTime();
 
 console.log('Initializing server properties...');
 
-var app = express();
-app.use(bodyParser.json())
-app.set('json spaces', 2);
-
+app.use(bodyParser.json());
 app.use(express.static(angular_folder))
 
 app.get('/api/totalcorner', (req, res) => {
-    if (last_scrape_time + 1800 < new Date().getTime()) { // every 30 minutes or whenever server reboots.
+    if (last_scrape_time + 120 * 60 < new Date().getTime()) { // every 2 minutes or whenever server reboots.
         last_scrape_time = new Date().getTime();
         scrape();
     }
-    res.status(200);
-    res.json(mongo_data);
+
+    // Launch all the queries!
+    var promise = new Promise(
+        (resolve, reject) => {
+            data = {}
+            models.Match.find({})
+                .then(
+                    result => {
+                        data.matches = result;
+                        if (Object.keys(data).length == 3) {
+                                resolve(data)
+                            }
+                        })
+                .catch(err => reject(err));
+            models.League.find({})
+                .then(
+                    result => {
+                        data.leagues = result;
+                        if (Object.keys(data).length == 3) {
+                                resolve(data)
+                            }
+                        })
+                .catch(err => reject(err));
+            models.Team.find({}).then(
+                    result => {
+                        data.teams = result;
+                        if (Object.keys(data).length == 3) {
+                                resolve(data)
+                            }
+                        })
+                    .catch(err => reject(err))
+            });
+
+        promise.then(
+            // All mongooses have returned with some data
+            // Respond with json
+            data => {
+                res.json(data);
+                res.status(200);
+            });
+
+        promise.catch(
+            err => console.log(err)
+        )
 });
 
 app.all('*', (req, res) => {
@@ -39,5 +82,3 @@ app.listen(port, () => {
     console.log("TotalCorner API server startup completed.")
     console.log("Listening on: http://localhost:" + port);
 });
-
-scrape()
