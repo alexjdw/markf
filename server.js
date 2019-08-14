@@ -1,7 +1,7 @@
 const express = require('express');
 const request = require('request');
 const bodyParser = require('body-parser');
-const cookie = require('cookie-parser');
+const cookieParser = require('cookie-parser');
 const mongoose = require('mongoose');
 const models = require('./server/models.js');
 const scrape = require('./server/scraper.js').scrape;
@@ -21,9 +21,14 @@ var last_scrape_time = new Date(0).getTime();
 console.log('Initializing server properties...');
 
 app.use(bodyParser.json());
-app.use(express.static(angular_folder))
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
 
-app.get('/api/totalcorner', (req, res) => {
+
+app.get('/', (req, res) => {
     if (last_scrape_time + 120 * 60 < new Date().getTime()) { // every 2 minutes or whenever server reboots.
         last_scrape_time = new Date().getTime();
         scrape();
@@ -72,10 +77,6 @@ app.get('/api/totalcorner', (req, res) => {
         promise.catch(
             err => console.log(err)
         )
-});
-
-app.all('*', (req, res) => {
-    res.status(200).sendFile(`/`, {root: angular_folder});
 });
 
 app.listen(port, () => {
